@@ -1,6 +1,6 @@
 ---
 title: "Tennsesse-Statewide land Use Dashboard"
-author: ""
+author: "Jaya Prakash Narayana Raavi"
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
