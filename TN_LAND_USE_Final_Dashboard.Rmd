@@ -1,0 +1,1491 @@
+---
+title: "Tennsesse-Statewide land Use Dashboard"
+author: ""
+output: 
+  flexdashboard::flex_dashboard:
+    social: menu
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(plotly)
+library(plyr)
+library(flexdashboard)
+library(leaflet)
+library(sf)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(tidyr)
+library(readxl)
+
+# create some data
+# Load the shapefile
+shape_data <- st_read("./TAZ_Shapefile/TN_TAZ_2010.shp")
+
+shape_data <- st_transform(shape_data, 4326)
+
+shape_data <- st_centroid(shape_data)
+
+# Load the CSV file
+data_2015 <- read_excel("./Forecasts_test/Forecasting_Result_2015_TDM.xlsx")
+data_2018 <- read_excel("./Forecasts_test/Forecasting_Result_2018_TDM.xlsx")
+data_2020 <- read_excel("./Forecasts_test/Forecasting_Result_2020_TDM.xlsx")
+data_2025 <- read_excel("./Forecasts_test/Forecasting_Result_2025_TDM.xlsx")
+data_2030 <- read_excel("./Forecasts_test/Forecasting_Result_2030_TDM.xlsx")
+data_2035 <- read_excel("./Forecasts_test/Forecasting_Result_2035_TDM.xlsx")
+data_2040 <- read_excel("./Forecasts_test/Forecasting_Result_2040_TDM.xlsx")
+data_2045 <- read_excel("./Forecasts_test/Forecasting_Result_2045_TDM.xlsx")
+data_2050 <- read_excel("./Forecasts_test/Forecasting_Result_2050_TDM.xlsx")
+# Add year to all column names
+column_names_2015 <- paste0(names(data_2015), "_", "2015")
+column_names_2018 <- paste0(names(data_2018), "_", "2018")
+column_names_2020 <- paste0(names(data_2020), "_", "2020")
+column_names_2025 <- paste0(names(data_2025), "_", "2025")
+column_names_2030 <- paste0(names(data_2030), "_", "2030")
+column_names_2035 <- paste0(names(data_2030), "_", "2035")
+column_names_2040 <- paste0(names(data_2030), "_", "2040")
+column_names_2045 <- paste0(names(data_2030), "_", "2045")
+column_names_2050 <- paste0(names(data_2030), "_", "2050")
+
+names(data_2015) <- column_names_2015
+names(data_2018) <- column_names_2018
+names(data_2020) <- column_names_2020
+names(data_2025) <- column_names_2025
+names(data_2030) <- column_names_2030
+names(data_2035) <- column_names_2035
+names(data_2040) <- column_names_2040
+names(data_2045) <- column_names_2045
+names(data_2050) <- column_names_2050
+
+left_join_result <- left_join(data_2015, data_2018, by = c("TAZ_ID_2015" = "TAZ_ID_2018")) %>%
+                    left_join(data_2020, by = c("TAZ_ID_2015" = "TAZ_ID_2020")) %>%
+                    left_join(data_2025, by = c("TAZ_ID_2015" = "TAZ_ID_2025")) %>%
+                    left_join(data_2030, by = c("TAZ_ID_2015" = "TAZ_ID_2030"))%>%
+                    left_join(data_2035, by = c("TAZ_ID_2015" = "TAZ_ID_2035"))%>%
+                    left_join(data_2040, by = c("TAZ_ID_2015" = "TAZ_ID_2040"))%>%
+                    left_join(data_2045, by = c("TAZ_ID_2015" = "TAZ_ID_2045"))%>%
+                    left_join(data_2050, by = c("TAZ_ID_2015" = "TAZ_ID_2050"))
+
+# Ensure the key columns are of the same data type
+
+data <- left_join(shape_data, left_join_result, by = c("TAZID" = "TAZ_ID_2015"))
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+# Population{.tabset}
+
+## R{.tabset}
+
+### Maps{.tabset}
+
+```{r}
+
+library(leaflet)
+
+# Assuming merged_data has a geometry column for plotting with leaflet
+# and TOTPOP is the total population you want to color by
+
+# Create a color palette for TOTPOP
+popPalette <- colorNumeric(palette = "Oranges", domain = data$TOTPOP_2050)
+
+leaflet(data) %>%
+  addTiles() %>%
+  addCircleMarkers(
+    fillColor = ~popPalette(TOTPOP_2015),  # Color by total population
+    color = NA,  # Set border color to transparent # Border width
+    fillOpacity = 0.5,  # Fill opacity
+    group="2015",radius = 2.5,
+    label = ~paste("Population:", TOTPOP_2015),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+  ) %>%
+  addCircleMarkers(
+    fillColor = ~popPalette(TOTPOP_2018),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+   group="2018",radius = 2.5,
+    label = ~paste("Population:", TOTPOP_2018),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+  ) %>%
+   addCircleMarkers(
+    fillColor = ~popPalette(TOTPOP_2020),  # Color by total population
+    color = NA,  # Set border color to transparent
+    weight = 1,  # Border width
+    opacity = 1,  # Border opacity
+    fillOpacity = 0.7,  # Fill opacity
+    group="2020",radius = 2.5,
+    label = ~paste("Population:", TOTPOP_2020),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+  addCircleMarkers(
+    fillColor = ~popPalette(TOTPOP_2025),  # Color by total population
+    color = NA,  # Set border color to transparent
+    weight = 1,  # Border width
+    opacity = 1,  # Border opacity
+    fillOpacity = 0.7,  # Fill opacity
+    group="2025",radius = 2.5,
+    label = ~paste("Population:", TOTPOP_2025),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(TOTPOP_2030),  # Color by total population
+    color = NA,  # Set border color to transparent
+    weight = 1,  # Border width
+    opacity = 1,  # Border opacity
+    fillOpacity = 0.7,  # Fill opacity
+    group="2030",radius = 2.5,
+    label = ~paste("Population:", TOTPOP_2030),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(TOTPOP_2035),  # Color by total population
+    color = NA,  # Set border color to transparent
+    weight = 1,  # Border width
+    opacity = 1,  # Border opacity
+    fillOpacity = 0.7,  # Fill opacity
+    group="2035",radius = 2.5,
+    label = ~paste("Population:", TOTPOP_2035),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(TOTPOP_2040),  # Color by total population
+    color = NA,  # Set border color to transparent
+    weight = 1,  # Border width
+    opacity = 1,  # Border opacity
+    fillOpacity = 0.7,  # Fill opacity
+    group="2040",radius = 2.5,
+    label = ~paste("Population:", TOTPOP_2040),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(TOTPOP_2045),  # Color by total population
+    color = NA,  # Set border color to transparent
+    weight = 1,  # Border width
+    opacity = 1,  # Border opacity
+    fillOpacity = 0.7,  # Fill opacity
+    group="2045",radius = 2.5,
+    label = ~paste("Population:", TOTPOP_2045),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(TOTPOP_2050),  # Color by total population
+    color = NA,  # Set border color to transparent
+    weight = 1,  # Border width
+    opacity = 1,  # Border opacity
+    fillOpacity = 0.7,  # Fill opacity
+    group="2050",radius = 2.5,
+    label = ~paste("Population:", TOTPOP_2050),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+  addLegend(
+    position = "bottomright",
+    pal = popPalette,
+    values = ~TOTPOP_2050,
+    title = "Total Population",
+    opacity = 0.7
+  )%>%
+  addLayersControl(baseGroups = c("2015","2018","2020","2025","2030","2035","2040","2045","2050"),options = layersControlOptions(collapsed= F))
+
+
+
+
+
+```
+
+
+### Mean Population types by region
+
+```{r}
+
+grouped_data <- data %>% group_by(REGION)
+summarized_data <- grouped_data %>% summarize(
+  mean_2015 = mean(TOTPOP_2015),
+   mean_2018 = mean(TOTPOP_2018),
+   mean_2020 = mean(TOTPOP_2020),
+   mean_2025 = mean(TOTPOP_2025),
+   mean_2030 = mean(TOTPOP_2030),
+   mean_2035 = mean(TOTPOP_2035),
+   mean_2040 = mean(TOTPOP_2040),
+   mean_2045 = mean(TOTPOP_2045),
+   mean_2050 = mean(TOTPOP_2050),
+)
+
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("mean"), names_to = "Year", values_to = "MeanPopulation") %>%
+  mutate(Year = factor(Year, levels = c("mean_2015", "mean_2018", "mean_2020", "mean_2025", "mean_2030", "mean_2035", "mean_2040", "mean_2045", "mean_2050"))) %>%
+  mutate(Year = recode(Year, "mean_2015" = "2015", "mean_2018" = "2018", "mean_2020" = "2020", "mean_2025" = "2025", "mean_2030" = "2030", "mean_2035" = "2035", "mean_2040" = "2040", "mean_2045" = "2045", "mean_2050" = "2050"))
+
+# Ensure REGION is treated as a factor for discrete color mapping
+long_data$REGION <- factor(long_data$REGION)
+
+# Example manual color palette
+color_palette <- c("1" = "blue", "2" = "red", "3" = "green", "4" = "purple")
+
+# Plot using ggplot
+plot <- ggplot(long_data, aes(x = Year, y = MeanPopulation, group = REGION, color = REGION)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = color_palette) +
+  labs(title = "Population Trends by Region from 2015 to 2050",
+       x = "Year",
+       y = "Mean Population") +
+  theme_minimal()
+
+# Convert to an interactive plot with ggplotly
+ggplotly(plot)
+
+```
+
+
+
+### Region Map
+
+```{r}
+
+
+
+# Generate a simple color palette
+num_regions <- length(unique(data$REGION))
+palette <- colorFactor(palette = "viridis", domain = data$REGION)
+
+leaflet(data) %>%
+  addTiles() %>%
+  addCircleMarkers(
+    fillColor = ~palette(REGION),
+    color = NA,  # Set border color to transparent
+   fillOpacity = 0.7,  radius = 7,
+    label = ~as.character(REGION),
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+  ) %>%
+  addLegend("bottomright", pal = palette, values = ~REGION,
+            title = "Region",
+            opacity = 0.7)
+
+
+
+
+
+```
+
+
+
+### Total Population distribution by region
+
+```{r}
+
+
+library(tidyverse)
+
+# Assuming 'summarized_data' is your data frame and it includes a 'REGION' column
+# and a 'total_2015' column representing the total population for each region in 2015.
+
+# Convert the 'REGION' column to a factor if it's not already
+
+grouped_data <- data %>% group_by(REGION)
+summarized_data <- grouped_data %>% summarize(
+  total_2015 = sum(TOTPOP_2015),
+   total_2018 = sum(TOTPOP_2018),
+   total_2020 = sum(TOTPOP_2020),
+   total_2025 = sum(TOTPOP_2025),
+   total_2030 = sum(TOTPOP_2030),
+   total_2035 = sum(TOTPOP_2035),
+   total_2040 = sum(TOTPOP_2040),
+   total_2045 = sum(TOTPOP_2045),
+   total_2050 = sum(TOTPOP_2050),
+)
+
+# Ensure your summarized_data data frame is ready
+# Assuming summarized_data has been prepared as described
+
+# Pivot the summarized_data to a long format for easier plotting
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("total_"), names_to = "Year", values_to = "Population") %>%
+  mutate(Year = str_remove(Year, "total_"))
+
+# Define the years and titles for the pie charts
+years <- c("2015", "2018", "2020", "2025", "2030", "2035", "2040", "2045", "2050")
+titles <- paste(years)
+
+# Create a list to store the pie charts
+pie_charts <- list()
+
+# Loop through the years and create a pie chart for each
+for (i in 1:length(years)) {
+  year_data <- filter(long_data, Year == years[i])
+  pie_charts[[i]] <- plot_ly(data = year_data, labels = ~REGION, values = ~Population, type = 'pie',
+                             textinfo = 'none',
+                             hoverinfo = 'label+percent+name', domain = list(row = floor((i-1) / 3), column = (i-1) %% 3))
+}
+
+# Combine the pie charts into a single figure with a layout for subplots
+fig <- subplot(pie_charts, nrows = 3, margin = 0.05, shareX = TRUE, shareY = TRUE) %>%
+  layout(title = 'Population Distribution by Region, 2015-2050',
+         grid = list(rows = 3, columns = 3),
+         annotations = list(x = 0.5, y = -0.1, text = "", showarrow = FALSE))
+
+# Add titles for each subplot
+for (i in 1:length(titles)) {
+  fig <- fig %>%
+    layout(annotations = list(x = ((i-1) %% 3) / 3 + 0.167, y = 1 - floor((i-1) / 3) / 3 - 0.052, text = titles[i], showarrow = TRUE, xref = 'paper', yref = 'paper'))
+}
+
+# Display the combined figure
+fig
+
+
+
+
+
+```
+
+
+## Row {.tabset}
+
+### Total populations Vs MPO
+
+```{r}
+
+
+
+
+library(tidyverse)
+
+# Assuming 'summarized_data' is your data frame and it includes a 'REGION' column
+# and a 'total_2015' column representing the total population for each region in 2015.
+
+# Convert the 'REGION' column to a factor if it's not already
+
+grouped_data <- data %>% group_by(MPO)
+summarized_data <- grouped_data %>% summarize(
+  total_2015 = sum(TOTPOP_2015),
+   total_2018 = sum(TOTPOP_2018),
+   total_2020 = sum(TOTPOP_2020),
+   total_2025 = sum(TOTPOP_2025),
+   total_2030 = sum(TOTPOP_2030),
+   total_2035 = sum(TOTPOP_2035),
+   total_2040 = sum(TOTPOP_2040),
+   total_2045 = sum(TOTPOP_2045),
+   total_2050 = sum(TOTPOP_2050),
+)
+
+# Ensure your summarized_data data frame is ready
+# Assuming summarized_data has been prepared as described
+
+# Pivot the summarized_data to a long format for easier plotting
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("total_"), names_to = "Year", values_to = "Population") %>%
+  mutate(Year = str_remove(Year, "total_"))
+long_data<- drop_na(long_data)
+# Define the years and titles for the pie charts
+years <- c("2015", "2018", "2020", "2025", "2030", "2035", "2040", "2045", "2050")
+titles <- paste(years)
+
+# Create a list to store the pie charts
+pie_charts <- list()
+
+# Loop through the years and create a pie chart for each
+for (i in 1:length(years)) {
+  year_data <- filter(long_data, Year == years[i])
+  pie_charts[[i]] <- plot_ly(data = year_data, labels = ~MPO, values = ~Population, type = 'pie',
+                            insidetextorientation = 'radial',
+                             hoverinfo = 'label+percent+name', textinfo = 'none', domain = list(row = floor((i-1) / 3), column = (i-1) %% 3))
+}
+
+# Combine the pie charts into a single figure with a layout for subplots
+fig <- subplot(pie_charts, nrows = 3, margin = 0.05, shareX = TRUE, shareY = TRUE) %>%
+  layout(title = 'Population Distribution by MPO, 2015-2050',
+         grid = list(rows = 3, columns = 3),
+         annotations = list(x = 0.5, y = -0.1, text = "", showarrow = FALSE))
+
+# Add titles for each subplot
+for (i in 1:length(titles)) {
+  fig <- fig %>%
+    layout(annotations = list(x = ((i-1) %% 3) / 3 + 0.167, y = 1 - floor((i-1) / 3) / 3 - 0.052, text = titles[i], showarrow = TRUE, xref = 'paper', yref = 'paper'))
+}
+
+# Display the combined figure
+fig
+
+
+
+
+
+
+
+
+
+
+
+
+```
+
+
+
+# HouseHold{.tabset}
+
+## charts{.tabset}
+
+### Maps
+
+```{r}
+
+library(leaflet)
+
+# Assuming merged_data has a geometry column for plotting with leaflet
+# and TOTPOP is the total population you want to color by
+
+# Create a color palette for TOTPOP
+popPalette <- colorNumeric(palette = "Oranges", domain = data$HHINC_2050)
+
+leaflet(data) %>%
+  addTiles() %>%
+  addCircleMarkers(
+    fillColor = ~popPalette(HHINC_2015),  # Color by total population
+    color = NA,  # Set border color to transparent # Border width
+    fillOpacity = 0.7,  # Fill opacity
+    group="2015",radius = 2.5,
+    label = ~paste("Household Income:", HHINC_2015),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+  ) %>%
+  addCircleMarkers(
+    fillColor = ~popPalette(HHINC_2018),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+   group="2018",radius = 2.5,
+    label = ~paste("Household Income:", HHINC_2018),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+  ) %>%
+   addCircleMarkers(
+    fillColor = ~popPalette(HHINC_2020),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2020",radius = 2.5,
+    label = ~paste("vHousehold Income:", HHINC_2020),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+  addCircleMarkers(
+    fillColor = ~popPalette(HHINC_2025),  # Color by total population
+    color = NA,  # Set border color to transparent
+    weight = 1,  # Border width
+    opacity = 1,  # Border opacity
+    fillOpacity = 0.7,  # Fill opacity
+    group="2025",radius = 2.5,
+    label = ~paste("Household Income:", HHINC_2025),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(HHINC_2030),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2030",radius = 2.5,
+    label = ~paste("Household Income:", HHINC_2030),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(HHINC_2035),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2035",radius = 2.5,
+    label = ~paste("Household Income:", HHINC_2035),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(HHINC_2040),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2040",radius = 2.5,
+    label = ~paste("Household Income:", HHINC_2040),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(HHINC_2045),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2045",radius = 2.5,
+    label = ~paste("Household Income:", HHINC_2045),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(HHINC_2050),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2050",radius = 2.5,
+    label = ~paste("Household Income:", HHINC_2050),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+  addLegend(
+    position = "bottomright",
+    pal = popPalette,
+    values = ~HHINC_2050,
+    title = "Household Income",
+    opacity = 0.7
+  )%>%
+  addLayersControl(baseGroups = c("2015","2018","2020","2025","2030","2035","2040","2045","2050"),options = layersControlOptions(collapsed= F))
+
+
+
+
+
+```
+
+### AVG HHINC vs Region
+
+```{r}
+
+grouped_data <- data %>% group_by(REGION)
+summarized_data <- grouped_data %>% summarize(
+  mean_2015 = mean(HHINC_2015),
+  mean_2018 = mean(HHINC_2018),
+  mean_2020 = mean(HHINC_2020),
+  mean_2025 = mean(HHINC_2025),
+  mean_2030 = mean(HHINC_2030),
+  mean_2035 = mean(HHINC_2035),
+  mean_2040 = mean(HHINC_2040),
+  mean_2045 = mean(HHINC_2045),
+  mean_2050 = mean(HHINC_2050),
+)
+
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("mean"), names_to = "Year", values_to = "MeanIncome") %>%
+  mutate(Year = factor(Year, levels = c("mean_2015", "mean_2018", "mean_2020", "mean_2025", "mean_2030", "mean_2035", "mean_2040", "mean_2045", "mean_2050"))) %>%
+  mutate(Year = recode(Year, "mean_2015" = "2015", "mean_2018" = "2018", "mean_2020" = "2020", "mean_2025" = "2025", "mean_2030" = "2030", "mean_2035" = "2035", "mean_2040" = "2040", "mean_2045" = "2045", "mean_2050" = "2050"))
+
+# Ensure REGION is treated as a factor for discrete color mapping
+long_data$REGION <- factor(long_data$REGION)
+
+# Example manual color palette
+color_palette <- c("1" = "blue", "2" = "red", "3" = "green", "4" = "purple")
+
+# Plot using ggplot
+plot <- ggplot(long_data, aes(x = Year, y = MeanIncome, group = REGION, color = REGION)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = color_palette) +
+  labs(title = "Income Trends by Region from 2015 to 2050",
+       x = "Year",
+       y = "Mean Income") +
+  theme_minimal()
+
+# Convert to an interactive plot with ggplotly
+ggplotly(plot)
+
+
+
+```
+
+
+## Row {.tabset}
+
+
+### AVG Household income in an MPO
+
+```{r}
+grouped_data <- data %>% group_by(MPO)
+summarized_data <- grouped_data %>% summarize(
+  mean_2015 = mean(HHINC_2015),
+  mean_2018 = mean(HHINC_2018),
+  mean_2020 = mean(HHINC_2020),
+  mean_2025 = mean(HHINC_2025),
+  mean_2030 = mean(HHINC_2030),
+  mean_2035 = mean(HHINC_2035),
+  mean_2040 = mean(HHINC_2040),
+  mean_2045 = mean(HHINC_2045),
+  mean_2050 = mean(HHINC_2050),
+)
+
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("mean"), names_to = "Year", values_to = "MeanIncome") %>%
+  mutate(Year = factor(Year, levels = c("mean_2015", "mean_2018", "mean_2020", "mean_2025", "mean_2030", "mean_2035", "mean_2040", "mean_2045", "mean_2050"))) %>%
+  mutate(Year = recode(Year, "mean_2015" = "2015", "mean_2018" = "2018", "mean_2020" = "2020", "mean_2025" = "2025", "mean_2030" = "2030", "mean_2035" = "2035", "mean_2040" = "2040", "mean_2045" = "2045", "mean_2050" = "2050"))
+
+long_data <- drop_na(long_data)
+# Ensure MPO is treated as a factor for discrete color mapping
+long_data$MPO <- factor(long_data$MPO)
+
+# Example manual color palette
+color_palette <- c("Greater Chattanooga" = "blue", "Greater Knoxville" = "red", "Jackson" = "green", "Memphis" = "purple","Middle TN"="yellow","Tri-Cities"="orange")
+
+# Plot using ggplot
+plot <- ggplot(long_data, aes(x = Year, y = MeanIncome, group = MPO, color = MPO)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = color_palette) +
+  labs(title = "Income Trends by MPO from 2015 to 2050",
+       x = "Year",
+       y = "Mean Income") +
+  theme_minimal()
+
+# Convert to an interactive plot with ggplotly
+ggplotly(plot)
+
+
+
+```
+
+
+# Employment{.tabset}
+
+## charts{.tabset}
+
+### Graphs
+
+```{r}
+
+library(leaflet)
+
+# Assuming merged_data has a geometry column for plotting with leaflet
+# and TOTPOP is the total population you want to color by
+
+# Create a color palette for TOTPOP
+popPalette <- colorNumeric(palette = "Oranges", domain = data$TOTEMP_2035)
+
+leaflet(data) %>%
+  addTiles() %>%
+  addCircleMarkers(
+    fillColor = ~popPalette(TOTEMP_2015),  # Color by total population
+    color = NA,  # Set border color to transparent # Border width
+    fillOpacity = 0.7,  # Fill opacity
+    group="2015",radius = 2.5,
+    label = ~paste("Total Employment:", TOTEMP_2015),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+  ) %>%
+  addCircleMarkers(
+    fillColor = ~popPalette(TOTEMP_2018),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+   group="2018",radius = 2.5,
+    label = ~paste("Total Employment:", TOTEMP_2018),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+  ) %>%
+   addCircleMarkers(
+    fillColor = ~popPalette(TOTEMP_2020),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2020",radius = 2.5,
+    label = ~paste("Total Employment:", TOTEMP_2020),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+  addCircleMarkers(
+    fillColor = ~popPalette(TOTEMP_2025),  # Color by total population
+    color = NA,  # Set border color to transparent
+    weight = 1,  # Border width
+    opacity = 1,  # Border opacity
+    fillOpacity = 0.7,  # Fill opacity
+    group="2025",radius = 2.5,
+    label = ~paste("Total Employment:", TOTEMP_2025),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(TOTEMP_2030),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2030",radius = 2.5,
+    label = ~paste("Total Employment:", TOTEMP_2030),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(TOTEMP_2035),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2035",radius = 2.5,
+    label = ~paste("Total Employment:", TOTEMP_2035),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(TOTEMP_2040),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2040",radius = 2.5,
+    label = ~paste("Total Employment:", TOTEMP_2040),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(TOTEMP_2045),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2045",radius = 2.5,
+    label = ~paste("Total Employment:", TOTEMP_2045),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(TOTEMP_2050),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2050",radius = 2.5,
+    label = ~paste("Total Employment:", TOTEMP_2050),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+  addLegend(
+    position = "bottomright",
+    pal = popPalette,
+    values = ~TOTEMP_2035,
+    title = "Total Employment",
+    opacity = 0.7
+  )%>%
+  addLayersControl(baseGroups = c("2015","2018","2020","2025","2030","2035","2040","2045","2050"),options = layersControlOptions(collapsed= F))
+
+
+```
+
+## Row {.tabset}
+
+
+### Total Employment vs MPO
+
+```{r}
+
+grouped_data <- data %>% group_by(MPO)
+summarized_data <- grouped_data %>% summarize(
+  sum_2015 = sum(TOTEMP_2015),
+  sum_2018 = sum(TOTEMP_2018),
+  sum_2020 = sum(TOTEMP_2020),
+  sum_2025 = sum(TOTEMP_2025),
+  sum_2030 = sum(TOTEMP_2030),
+  sum_2035 = sum(TOTEMP_2035),
+  sum_2040 = sum(TOTEMP_2040),
+  sum_2045 = sum(TOTEMP_2045),
+  sum_2050 = sum(TOTEMP_2050),
+)
+
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("sum"), names_to = "Year", values_to = "TotalEmployment") %>%
+  mutate(Year = factor(Year, levels = c("sum_2015", "sum_2018", "sum_2020", "sum_2025", "sum_2030", "sum_2035", "sum_2040", "sum_2045", "sum_2050"))) %>%
+  mutate(Year = recode(Year, "sum_2015" = "2015", "sum_2018" = "2018", "sum_2020" = "2020", "sum_2025" = "2025", "sum_2030" = "2030", "sum_2035" = "2035", "sum_2040" = "2040", "sum_2045" = "2045", "sum_2050" = "2050"))
+long_data<- drop_na(long_data)
+# Ensure MPO is treated as a factor for discrete color mapping
+long_data$MPO <- factor(long_data$MPO)
+
+
+# Example manual color palette
+color_palette <- c("Greater Chattanooga" = "blue", "Greater Knoxville" = "red", "Jackson" = "green", "Memphis" = "purple","Middle TN"="yellow","Tri-Cities"="orange")
+
+# Plot using ggplot
+plot <- ggplot(long_data, aes(x = Year, y = TotalEmployment, group = MPO, color = MPO)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = color_palette) +
+  labs(title = "Employment Trends by MPO from 2015 to 2050",
+       x = "Year",
+       y = "Total Employment") +
+  theme_minimal()
+
+# Convert to an interactive plot with ggplotly
+ggplotly(plot)
+
+```
+
+### Total Employment vs Region
+
+```{r}
+grouped_data <- data %>% group_by(REGION)
+summarized_data <- grouped_data %>% summarize(
+  sum_2015 = sum(TOTEMP_2015),
+  sum_2018 = sum(TOTEMP_2018),
+  sum_2020 = sum(TOTEMP_2020),
+  sum_2025 = sum(TOTEMP_2025),
+  sum_2030 = sum(TOTEMP_2030),
+  sum_2035 = sum(TOTEMP_2035),
+  sum_2040 = sum(TOTEMP_2040),
+  sum_2045 = sum(TOTEMP_2045),
+  sum_2050 = sum(TOTEMP_2050),
+)
+
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("sum"), names_to = "Year", values_to = "TotalEmployment") %>%
+  mutate(Year = factor(Year, levels = c("sum_2015", "sum_2018", "sum_2020", "sum_2025", "sum_2030", "sum_2035", "sum_2040", "sum_2045", "sum_2050"))) %>%
+  mutate(Year = recode(Year, "sum_2015" = "2015", "sum_2018" = "2018", "sum_2020" = "2020", "sum_2025" = "2025", "sum_2030" = "2030", "sum_2035" = "2035", "sum_2040" = "2040", "sum_2045" = "2045", "sum_2050" = "2050"))
+
+# Ensure REGION is treated as a factor for discrete color mapping
+long_data$REGION <- factor(long_data$REGION)
+
+# Example manual color palette
+color_palette <- c("1" = "blue", "2" = "red", "3" = "green", "4" = "purple")
+
+# Plot using ggplot
+plot <- ggplot(long_data, aes(x = Year, y = TotalEmployment, group = REGION, color = REGION)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = color_palette) +
+  labs(title = "Employment Trends by Region from 2015 to 2050",
+       x = "Year",
+       y = "Total Employment") +
+  theme_minimal()
+
+# Convert to an interactive plot with ggplotly
+ggplotly(plot)
+
+
+```
+
+
+
+
+
+# Land Usage{.tabset}
+
+## charts{.tabset}
+
+### Graphs
+
+```{r}
+
+
+library(leaflet)
+
+# Assuming merged_data has a geometry column for plotting with leaflet
+# and TOTPOP is the total population you want to color by
+
+# Create a color palette for TOTPOP
+popPalette <- colorNumeric(palette = "Oranges", domain = data$Agr_2050)
+
+leaflet(data) %>%
+  addTiles() %>%
+  addCircleMarkers(
+    fillColor = ~popPalette(Agr_2015),  # Color by total population
+    color = NA,  # Set border color to transparent # Border width
+    fillOpacity = 0.7,  # Fill opacity
+    group="2015",radius = 2.5,
+    label = ~paste("Total Land:", Agr_2015),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+  ) %>%
+  addCircleMarkers(
+    fillColor = ~popPalette(Agr_2018),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+   group="2018",radius = 2.5,
+    label = ~paste("TOTAL LAND:", Agr_2018),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+  ) %>%
+   addCircleMarkers(
+    fillColor = ~popPalette(Agr_2020),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2020",radius = 2.5,
+    label = ~paste("TOTAL LAND:", Agr_2020),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+  addCircleMarkers(
+    fillColor = ~popPalette(Agr_2025),  # Color by total population
+    color = NA,  # Set border color to transparent
+    weight = 1,  # Border width
+    opacity = 1,  # Border opacity
+    fillOpacity = 0.7,  # Fill opacity
+    group="2025",radius = 2.5,
+    label = ~paste("Household Income:", Agr_2025),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(Agr_2030),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2030",radius = 2.5,
+    label = ~paste("Household Income:", Agr_2030),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(Agr_2035),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2035",radius = 2.5,
+    label = ~paste("Household Income:", Agr_2035),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(Agr_2040),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2040",radius = 2.5,
+    label = ~paste("Household Income:", Agr_2040),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(Agr_2045),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2045",radius = 2.5,
+    label = ~paste("Household Income:", Agr_2045),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+   addCircleMarkers(
+    fillColor = ~popPalette(Agr_2050),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    group="2050",radius = 2.5,
+    label = ~paste("Household Income:", Agr_2050),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+)%>%
+  addLegend(
+    position = "bottomright",
+    pal = popPalette,
+    values = ~Agr_2050,
+    title = "Agricultural Land",
+    opacity = 0.7
+  )%>%
+  addLayersControl(baseGroups = c("2015","2018","2020","2025","2030","2035","2040","2045","2050"),options = layersControlOptions(collapsed= F))
+
+
+
+
+
+```
+
+### land distribution by Region
+
+```{r}
+library(tidyverse)
+
+# Assuming 'summarized_data' is your data frame and it includes a 'REGION' column
+# and a 'total_2015' column repTotLandenting the total Total_Land for each region in 2015.
+
+# Convert the 'REGION' column to a factor if it's not already
+
+grouped_data <- data %>% group_by(REGION)
+summarized_data <- grouped_data %>% summarize(
+  total_2015 = sum(TotLand_2015),
+  total_2018 = sum(TotLand_2018),
+  total_2020 = sum(TotLand_2020),
+  total_2025 = sum(TotLand_2025),
+  total_2030 = sum(TotLand_2030),
+  total_2035 = sum(TotLand_2035),
+  total_2040 = sum(TotLand_2040),
+  total_2045 = sum(TotLand_2045),
+  total_2050 = sum(TotLand_2050),
+)
+
+# Ensure your summarized_data data frame is ready
+# Assuming summarized_data has been prepared as described
+
+# Pivot the summarized_data to a long format for easier plotting
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("total_"), names_to = "Year", values_to = "Total_Land") %>%
+  mutate(Year = str_remove(Year, "total_"))
+
+# Define the years and titles for the pie charts
+years <- c("2015", "2018", "2020", "2025", "2030", "2035", "2040", "2045", "2050")
+titles <- paste(years)
+
+# Create a list to store the pie charts
+pie_charts <- list()
+
+# Loop through the years and create a pie chart for each
+for (i in 1:length(years)) {
+  year_data <- filter(long_data, Year == years[i])
+  pie_charts[[i]] <- plot_ly(data = year_data, labels = ~REGION, values = ~Total_Land, type = 'pie',
+                             textinfo = 'label+percent', insidetextorientation = 'radial',
+                             hoverinfo = 'label+percent+name', domain = list(row = floor((i-1) / 3), column = (i-1) %% 3))
+}
+
+# TotLandbine the pie charts into a single figure with a layout for subplots
+fig <- subplot(pie_charts, nrows = 3, margin = 0.05, shareX = TRUE, shareY = TRUE) %>%
+  layout(title = 'Total_Land Distribution by Region, 2015-2050',
+         grid = list(rows = 3, columns = 3),
+         annotations = list(x = 0.5, y = -0.1, text = "", showarrow = FALSE))
+
+# Add titles for each subplot
+for (i in 1:length(titles)) {
+  fig <- fig %>%
+    layout(annotations = list(x = ((i-1) %% 3) / 3 + 0.167, y = 1 - floor((i-1) / 3) / 3 - 0.033, text = titles[i], showarrow = FALSE, xref = 'paper', yref = 'paper'))
+}
+
+# Display the TotLandbined figure
+fig
+
+
+
+```
+
+### Landuse distribution vs MPO
+
+```{r}
+
+
+
+
+
+
+library(tidyverse)
+
+# Assuming 'summarized_data' is your data frame and it includes a 'MPO' column
+# and a 'total_2015' column repTotLandenting the total Total_Land for each MPO in 2015.
+
+# Convert the 'MPO' column to a factor if it's not already
+
+grouped_data <- data %>% group_by(MPO)
+summarized_data <- grouped_data %>% summarize(
+  total_2015 = sum(TotLand_2015),
+  total_2018 = sum(TotLand_2018),
+  total_2020 = sum(TotLand_2020),
+  total_2025 = sum(TotLand_2025),
+  total_2030 = sum(TotLand_2030),
+  total_2035 = sum(TotLand_2035),
+  total_2040 = sum(TotLand_2040),
+  total_2045 = sum(TotLand_2045),
+  total_2050 = sum(TotLand_2050),
+)
+
+# Ensure your summarized_data data frame is ready
+# Assuming summarized_data has been prepared as described
+
+# Pivot the summarized_data to a long format for easier plotting
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("total_"), names_to = "Year", values_to = "Total_Land") %>%
+  mutate(Year = str_remove(Year, "total_"))
+long_data <- drop_na(long_data)
+
+# Define the years and titles for the pie charts
+years <- c("2015", "2018", "2020", "2025", "2030", "2035", "2040", "2045", "2050")
+titles <- paste(years)
+
+# Create a list to store the pie charts
+pie_charts <- list()
+
+# Loop through the years and create a pie chart for each
+for (i in 1:length(years)) {
+  year_data <- filter(long_data, Year == years[i])
+  pie_charts[[i]] <- plot_ly(data = year_data, labels = ~MPO, values = ~Total_Land, type = 'pie',
+                             textinfo = 'none', insidetextorientation = 'radial',
+                             hoverinfo = 'label+percent+name', domain = list(row = floor((i-1) / 3), column = (i-1) %% 3))
+}
+
+# TotLandbine the pie charts into a single figure with a layout for subplots
+fig <- subplot(pie_charts, nrows = 3, margin = 0.05, shareX = TRUE, shareY = TRUE) %>%
+  layout(title = 'Total_Land Distribution by MPO, 2015-2050',
+         grid = list(rows = 3, columns = 3),
+         annotations = list(x = 0.5, y = -0.1, text = "", showarrow = FALSE))
+
+# Add titles for each subplot
+for (i in 1:length(titles)) {
+  fig <- fig %>%
+    layout(annotations = list(x = ((i-1) %% 3) / 3 + 0.167, y = 1 - floor((i-1) / 3) / 3 - 0.052, text = titles[i], showarrow = TRUE, xref = 'paper', yref = 'paper'))
+}
+
+# Display the TotLandbined figure
+fig
+
+
+```
+
+
+
+
+## Row {.tabset}
+
+### Residental land in Tennessee
+
+```{r}
+
+library(tidyverse)
+
+# Assuming 'summarized_data' is your data frame and it includes a 'REGION' column
+# and a 'total_2015' column representing the total Residential_Land for each region in 2015.
+
+# Convert the 'REGION' column to a factor if it's not already
+
+grouped_data <- data %>% group_by(REGION)
+summarized_data <- grouped_data %>% summarize(
+  total_2015 = sum(Res_2015),
+  total_2018 = sum(Res_2018),
+  total_2020 = sum(Res_2020),
+  total_2025 = sum(Res_2025),
+  total_2030 = sum(Res_2030),
+  total_2035 = sum(Res_2035),
+  total_2040 = sum(Res_2040),
+  total_2045 = sum(Res_2045),
+  total_2050 = sum(Res_2050),
+)
+
+# Ensure your summarized_data data frame is ready
+# Assuming summarized_data has been prepared as described
+
+# Pivot the summarized_data to a long format for easier plotting
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("total_"), names_to = "Year", values_to = "Residential_Land") %>%
+  mutate(Year = str_remove(Year, "total_"))
+
+# Define the years and titles for the pie charts
+years <- c("2015", "2018", "2020", "2025", "2030", "2035", "2040", "2045", "2050")
+titles <- paste(years)
+
+# Create a list to store the pie charts
+pie_charts <- list()
+
+# Loop through the years and create a pie chart for each
+for (i in 1:length(years)) {
+  year_data <- filter(long_data, Year == years[i])
+  pie_charts[[i]] <- plot_ly(data = year_data, labels = ~REGION, values = ~Residential_Land, type = 'pie',
+                             textinfo = 'label+percent', insidetextorientation = 'radial',
+                             hoverinfo = 'label+percent+name', domain = list(row = floor((i-1) / 3), column = (i-1) %% 3))
+}
+
+# Resbine the pie charts into a single figure with a layout for subplots
+fig <- subplot(pie_charts, nrows = 3, margin = 0.05, shareX = TRUE, shareY = TRUE) %>%
+  layout(title = 'Residential_Land Distribution by Region, 2015-2050',
+         grid = list(rows = 3, columns = 3),
+         annotations = list(x = 0.5, y = -0.1, text = "", showarrow = FALSE))
+
+# Add titles for each subplot
+for (i in 1:length(titles)) {
+  fig <- fig %>%
+    layout(annotations = list(x = ((i-1) %% 3) / 3 + 0.167, y = 1 - floor((i-1) / 3) / 3 - 0.033, text = titles[i], showarrow = TRUE, xref = 'paper', yref = 'paper'))
+}
+
+# Display the Resbined figure
+fig
+
+```
+
+### Commercial land in Tennessee
+
+```{r}
+
+library(tidyverse)
+
+# Assuming 'summarized_data' is your data frame and it includes a 'REGION' column
+# and a 'total_2015' column representing the total Commercial_Land for each region in 2015.
+
+# Convert the 'REGION' column to a factor if it's not already
+
+grouped_data <- data %>% group_by(REGION)
+summarized_data <- grouped_data %>% summarize(
+  total_2015 = sum(Com_2015),
+  total_2018 = sum(Com_2018),
+  total_2020 = sum(Com_2020),
+  total_2025 = sum(Com_2025),
+  total_2030 = sum(Com_2030),
+  total_2035 = sum(Com_2035),
+  total_2040 = sum(Com_2040),
+  total_2045 = sum(Com_2045),
+  total_2050 = sum(Com_2050),
+)
+
+# Ensure your summarized_data data frame is ready
+# Assuming summarized_data has been prepared as described
+
+# Pivot the summarized_data to a long format for easier plotting
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("total_"), names_to = "Year", values_to = "Commercial_Land") %>%
+  mutate(Year = str_remove(Year, "total_"))
+
+# Define the years and titles for the pie charts
+years <- c("2015", "2018", "2020", "2025", "2030", "2035", "2040", "2045", "2050")
+titles <- paste(years)
+
+# Create a list to store the pie charts
+pie_charts <- list()
+
+# Loop through the years and create a pie chart for each
+for (i in 1:length(years)) {
+  year_data <- filter(long_data, Year == years[i])
+  pie_charts[[i]] <- plot_ly(data = year_data, labels = ~REGION, values = ~Commercial_Land, type = 'pie',
+                             textinfo = 'label+percent', insidetextorientation = 'radial',
+                             hoverinfo = 'label+percent+name', domain = list(row = floor((i-1) / 3), column = (i-1) %% 3))
+}
+
+# Combine the pie charts into a single figure with a layout for subplots
+fig <- subplot(pie_charts, nrows = 3, margin = 0.05, shareX = TRUE, shareY = TRUE) %>%
+  layout(title = 'Commercial_Land Distribution by Region, 2015-2050',
+         grid = list(rows = 3, columns = 3),
+         annotations = list(x = 0.5, y = -0.1, text = "", showarrow = FALSE))
+
+# Add titles for each subplot
+for (i in 1:length(titles)) {
+  fig <- fig %>%
+    layout(annotations = list(x = ((i-1) %% 3) / 3 + 0.167, y = 1 - floor((i-1) / 3) / 3 - 0.033, text = titles[i], showarrow = TRUE, xref = 'paper', yref = 'paper'))
+}
+
+# Display the Combined figure
+fig
+
+```
+
+### industrial land in Tennessee
+
+```{r}
+
+library(tidyverse)
+
+# Assuming 'summarized_data' is your data frame and it includes a 'REGION' column
+# and a 'total_2015' column representing the total Industrial_Land for each region in 2015.
+
+# Convert the 'REGION' column to a factor if it's not already
+
+grouped_data <- data %>% group_by(REGION)
+summarized_data <- grouped_data %>% summarize(
+  total_2015 = sum(Ind_2015),
+  total_2018 = sum(Ind_2018),
+  total_2020 = sum(Ind_2020),
+  total_2025 = sum(Ind_2025),
+  total_2030 = sum(Ind_2030),
+  total_2035 = sum(Ind_2035),
+  total_2040 = sum(Ind_2040),
+  total_2045 = sum(Ind_2045),
+  total_2050 = sum(Ind_2050),
+)
+
+# Ensure your summarized_data data frame is ready
+# Assuming summarized_data has been prepared as described
+
+# Pivot the summarized_data to a long format for easier plotting
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("total_"), names_to = "Year", values_to = "Industrial_Land") %>%
+  mutate(Year = str_remove(Year, "total_"))
+
+# Define the years and titles for the pie charts
+years <- c("2015", "2018", "2020", "2025", "2030", "2035", "2040", "2045", "2050")
+titles <- paste(years)
+
+# Create a list to store the pie charts
+pie_charts <- list()
+
+# Loop through the years and create a pie chart for each
+for (i in 1:length(years)) {
+  year_data <- filter(long_data, Year == years[i])
+  pie_charts[[i]] <- plot_ly(data = year_data, labels = ~REGION, values = ~Industrial_Land, type = 'pie',
+                             textinfo = 'label+percent', insidetextorientation = 'radial',
+                             hoverinfo = 'label+percent+name', domain = list(row = floor((i-1) / 3), column = (i-1) %% 3))
+}
+
+# Combine the pie charts into a single figure with a layout for subplots
+fig <- subplot(pie_charts, nrows = 3, margin = 0.05, shareX = TRUE, shareY = TRUE) %>%
+  layout(title = 'Industrial_Land Distribution by Region, 2015-2050',
+         grid = list(rows = 3, columns = 3),
+         annotations = list(x = 0.5, y = -0.1, text = "", showarrow = FALSE))
+
+# Add titles for each subplot
+for (i in 1:length(titles)) {
+  fig <- fig %>%
+    layout(annotations = list(x = ((i-1) %% 3) / 3 + 0.167, y = 1 - floor((i-1) / 3) / 3 - 0.033, text = titles[i], showarrow = TRUE, xref = 'paper', yref = 'paper'))
+}
+
+# Display the combined figure
+fig
+
+```
+
+### Agricultural land in Tennessee
+
+```{r}
+
+library(tidyverse)
+
+# Assuming 'summarized_data' is your data frame and it includes a 'REGION' column
+# and a 'total_2015' column representing the total Agricultural_Land for each region in 2015.
+
+# Convert the 'REGION' column to a factor if it's not already
+
+grouped_data <- data %>% group_by(REGION)
+summarized_data <- grouped_data %>% summarize(
+  total_2015 = sum(Agr_2015),
+  total_2018 = sum(Agr_2018),
+  total_2020 = sum(Agr_2020),
+  total_2025 = sum(Agr_2025),
+  total_2030 = sum(Agr_2030),
+  total_2035 = sum(Agr_2035),
+  total_2040 = sum(Agr_2040),
+  total_2045 = sum(Agr_2045),
+  total_2050 = sum(Agr_2050),
+)
+
+# Ensure your summarized_data data frame is ready
+# Assuming summarized_data has been prepared as described
+
+# Pivot the summarized_data to a long format for easier plotting
+long_data <- summarized_data %>%
+  pivot_longer(cols = starts_with("total_"), names_to = "Year", values_to = "Agricultural_Land") %>%
+  mutate(Year = str_remove(Year, "total_"))
+
+# Define the years and titles for the pie charts
+years <- c("2015", "2018", "2020", "2025", "2030", "2035", "2040", "2045", "2050")
+titles <- paste(years)
+
+# Create a list to store the pie charts
+pie_charts <- list()
+
+# Loop through the years and create a pie chart for each
+for (i in 1:length(years)) {
+  year_data <- filter(long_data, Year == years[i])
+  pie_charts[[i]] <- plot_ly(data = year_data, labels = ~REGION, values = ~Agricultural_Land, type = 'pie',
+                             textinfo = 'label+percent', insidetextorientation = 'radial',
+                             hoverinfo = 'label+percent+name', domain = list(row = floor((i-1) / 3), column = (i-1) %% 3))
+}
+
+# Combine the pie charts into a single figure with a layout for subplots
+fig <- subplot(pie_charts, nrows = 3, margin = 0.05, shareX = TRUE, shareY = TRUE) %>%
+  layout(title = 'Agricultural_Land Distribution by Region, 2015-2050',
+         grid = list(rows = 3, columns = 3),
+         annotations = list(x = 0.5, y = -0.1, text = "", showarrow = FALSE))
+
+# Add titles for each subplot
+for (i in 1:length(titles)) {
+  fig <- fig %>%
+    layout(annotations = list(x = ((i-1) %% 3) / 3 + 0.167, y = 1 - floor((i-1) / 3) / 3 - 0.033, text = titles[i], showarrow = TRUE, xref = 'paper', yref = 'paper'))
+}
+
+# Display the combined figure
+fig
+
+
+
+```
+
+
+

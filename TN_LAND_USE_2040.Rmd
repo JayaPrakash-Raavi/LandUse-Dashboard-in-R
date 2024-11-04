@@ -1,0 +1,691 @@
+---
+title: "Tennsesse-Statewide land Use Dashboard"
+author: ""
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    social: menu
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(plotly)
+library(plyr)
+library(flexdashboard)
+library(leaflet)
+library(sf)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(tidyr)
+library(readxl)
+
+# create some data
+# Load the shapefile
+shape_data <- st_read("./TAZ_Shapefile/TN_TAZ_2010.shp")
+
+shape_data <- st_transform(shape_data, 4326)
+
+shape_data <- st_centroid(shape_data)
+# Load the CSV file
+
+
+csv_data <- read_excel("./Forecasts_test/Forecasting_Result_2040_TDM.xlsx")
+
+# Ensure the key columns are of the same data type
+csv_data$TAZ_ID <- as.integer(csv_data$TAZ_ID)
+
+# Merge the data
+merged_data <- left_join(shape_data, csv_data, by = c("TAZID" = "TAZ_ID"))
+```
+
+# Population{.tabset}
+
+## charts{.tabset}
+
+### Graphs
+
+```{r}
+
+aggregated_data <- merged_data %>%
+  group_by(REGION) %>%
+  summarise(GQPOP = sum(GQPOP, na.rm = TRUE))
+
+GQPOP<-ggplot(aggregated_data, aes(x = REGION, y = GQPOP, fill = REGION)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Group Quarters Population by REGION",
+       x = "REGION",
+       y = "Group Quarters Population") +
+  coord_flip() # For horizontal bars
+ggplotly(GQPOP)
+
+```
+
+
+### Mean Population types by region
+
+```{r}
+
+aggregated_data <- merged_data %>%
+  group_by(REGION) %>%
+  summarise(TOTPOP = mean(TOTPOP, na.rm = TRUE),
+            HHPOP = mean(HHPOP, na.rm = TRUE),
+            GQPOP = mean(GQPOP, na.rm = TRUE))
+# Reshape data for plotting with ggplot2
+long_data <- aggregated_data %>% 
+  pivot_longer(cols = c("TOTPOP", "HHPOP", "GQPOP"), names_to = "Population_Type", values_to = "Value")
+
+# Create the bar plot
+BAR<-ggplot(long_data, aes(x = REGION, y = Value, fill = Population_Type)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme_minimal() + 
+  labs(title = "Mean Population Types by REGION", x = "REGION", y = "Mean Population") + 
+  scale_fill_brewer(palette = "Set2") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggplotly(BAR)
+
+
+
+```
+
+
+
+### Region Map
+
+```{r}
+
+
+# Generate a simple color palette
+num_regions <- length(unique(merged_data$REGION))
+palette <- colorFactor(palette = "viridis", domain = merged_data$REGION)
+
+leaflet(merged_data) %>%
+  addTiles() %>%
+  addCircleMarkers(
+    fillColor = ~palette(REGION),
+    color = NA,  # Set border color to transparent
+   fillOpacity = 0.7,  radius = 7,
+    label = ~as.character(REGION),
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    )
+  ) %>%
+  addLegend("bottomright", pal = palette, values = ~REGION,
+            title = "Region",
+            opacity = 0.7)
+
+
+
+
+```
+
+
+
+### Total Population distribution
+
+```{r}
+
+popPalette <- colorNumeric(palette = "Oranges", domain = merged_data$TOTPOP)
+
+leaflet(merged_data) %>% 
+  addTiles() %>% 
+  addCircleMarkers(
+    fillColor = ~popPalette(TOTPOP),  # Color by total population
+    color = NA,  # Set border color to transparent
+    fillOpacity = 0.7,  # Fill opacity
+    radius = 2.5,
+    label = ~paste("Population:", TOTPOP),  # Show population on hover
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal"),
+      textsize = "13px",
+      direction = "auto"
+    ),
+    group = "2018"
+  ) %>%
+  addLayersControl(
+    overlayGroups = c("2018"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>%
+  addLegend(
+    position = "bottomright",
+    pal = popPalette,
+    values = ~TOTPOP,
+    title = "Total Population",
+    opacity = 0.7
+  )
+
+
+```
+
+## Row
+
+### ALL populations Vs MPO
+
+```{r}
+
+aggregated_data <- merged_data %>%
+  group_by(MPO) %>%
+  summarise(TOTPOP = sum(TOTPOP, na.rm = TRUE),
+            HHPOP = sum(HHPOP, na.rm = TRUE),
+            GQPOP = sum(GQPOP, na.rm = TRUE))
+# Reshape data for plotting with ggplot2
+long_data <- aggregated_data %>% 
+  pivot_longer(cols = c("TOTPOP", "HHPOP", "GQPOP"), names_to = "Population_Type", values_to = "Value")
+
+# Create the bar plot
+BAR<-ggplot(long_data, aes(x = MPO, y = Value, fill = Population_Type)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme_minimal() + 
+  labs(title = "Population Types by MPO", x = "MPO", y = "Population") + 
+  scale_fill_brewer(palette = "Set2") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggplotly(BAR)
+
+```
+
+### Group Quarters vs MPO
+
+```{r}
+
+
+# Generate a color palette function
+aggregated_data <- merged_data %>%
+  group_by(MPO) %>%
+  summarise(GQPOP = sum(GQPOP, na.rm = TRUE))
+
+aggregated_data <- aggregated_data %>%
+  arrange(desc(GQPOP))
+
+GQPOP_plot <- ggplot(aggregated_data, aes(x = reorder(MPO, GQPOP), y = GQPOP, fill = MPO)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Group Quarters Population by MPO",
+       x = "MPO",
+       y = "Group Quarters Population") +
+  coord_flip() # For horizontal bars
+
+ggplotly(GQPOP_plot)
+
+
+```
+
+### Population
+
+```{r}
+
+continous<-ggplot(merged_data, aes(x = TOTPOP)) +
+  geom_density(alpha = 0.3, linetype = "solid", color = "red", size = 1.5, fill = "red") +  # Added fill and increased size
+  geom_histogram(aes(y = ..density..), binwidth = 100, fill = "blue", color = "black", alpha = 0.5) +  # Use density scale for y
+  labs(title = "Total Population Distribution", x = "Total Population", y = "Density") +
+  theme_minimal()
+ggplotly(continous)
+
+
+```
+
+
+
+# HouseHold{.tabset}
+
+## charts{.tabset}
+
+### Graphs
+
+```{r}
+
+# Define a color for each household size group
+colors <- c('1' = "#1f77b4", '2' = "#ff7f0e", '3' = "#2ca02c", 
+            '4' = "#d62728", '5' = "#9467bd", '6' = "#8c564b")
+data <- merged_data %>%
+  mutate(HHSIZE_group = case_when(
+    HHSIZE >= 0 & HHSIZE <= 1.5 ~ '1',
+    HHSIZE > 1.5 & HHSIZE <= 2.5 ~ '2',
+    HHSIZE > 2.5 & HHSIZE <= 3.5 ~ '3',
+    HHSIZE > 3.5 & HHSIZE <= 4.5 ~ '4', 
+    HHSIZE > 4.5 & HHSIZE <= 5.5 ~ '5',
+    HHSIZE > 5.5 ~ '6'
+  ))
+
+p <- ggplot(data, aes(x = HHSIZE_group, fill = HHSIZE_group)) +
+  geom_bar(stat = "count", color = "black") +
+  scale_fill_manual(values = colors, 
+                    name = "Household Size Group", 
+                    labels = c('1' = "0-1.5", '2' = "1.5-2.5", '3' = "2.5-3.5", 
+                               '4' = "3.5-4.5", '5' = "4.5-5.5", '6' = "5.5+")) +
+  labs(title = "Frequency of Household Size Groups",
+       x = "Household Size Group",
+       y = "Frequency") +
+  theme_minimal()
+
+# Convert to an interactive plot with plotly
+ggplotly(p)
+
+
+```
+
+### AVG HHINC vs MPO
+
+```{r}
+
+
+aggregated_data <- merged_data %>%
+  filter(!is.na(MPO)) %>%
+  group_by(MPO) %>%
+  summarise(HHINC = mean(HHINC, na.rm = TRUE))
+
+HHI<-ggplot(aggregated_data, aes(x = MPO, y = HHINC, fill = MPO)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "HouseHold Income by MPO",
+       x = "MPO",
+       y = "HouseHold Income") +
+  coord_flip() # For horizontal bars
+ggplotly(HHI)
+
+
+```
+
+
+## Row
+
+### AVG Household's in an MPO
+
+```{r}
+
+aggregated_data <- merged_data %>%
+  filter(!is.na(MPO)) %>%
+  group_by(MPO) %>%
+  summarise(HH = mean(HH, na.rm = TRUE))
+
+HH<-ggplot(aggregated_data, aes(x = MPO, y = HH, fill = MPO)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "HouseHold by MPO",
+       x = "MPO",
+       y = "HouseHold") +
+  coord_flip() # For horizontal bars
+ggplotly(HH)
+
+```
+
+### Region Map
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+# Assuming 'merged_data' is prepared and contains 'TOTEMP'
+
+# Create the ggplot object
+ggplot_map <- ggplot(data = merged_data) +
+  geom_sf(aes(color = HHINC), size = 1.5) +  # Use color to represent TOTEMP
+  scale_color_distiller(palette = "Spectral", direction = 1) +  # Adjust palette as needed
+  labs(title = "Total Employment",
+       subtitle = "By Traffic Analysis Zone or MPO",
+       color = "Total Employment") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Convert the ggplot object to plotly
+interactive_map <- ggplotly(ggplot_map)
+
+# Display the interactive map
+interactive_map
+
+
+
+```
+
+### Household Income
+
+```{r}
+
+continous<-ggplot(merged_data, aes(x = HHINC)) +
+  geom_density(alpha = 0.3, linetype = "solid", color = "red", size = 1.5, fill = "red") +  # Added fill and increased size
+  geom_histogram(aes(y = ..density..), binwidth = 100, fill = "blue", color = "black", alpha = 0.5) +  # Use density scale for y
+  labs(title = "Household Income Distribution", x = "Household Income", y = "Density") +
+  theme_minimal()
+ggplotly(continous)
+
+
+```
+
+# Employment{.tabset}
+
+## charts{.tabset}
+
+### Graphs
+
+```{r}
+
+
+generate_sector_plot <- function(sector) {
+  sector_sym <- sym(sector) # Convert string to symbol
+  ggplot(merged_data, aes(x = MPO, y = !!sector_sym, fill = MPO)) +
+    geom_bar(stat = "identity") +
+    theme_minimal() +
+    labs(title = paste("Employment in Sector", sector, "by MPO"), x = "MPO", y = "Number of Employees") +
+    coord_flip()
+}
+
+
+long_data <- merged_data %>%
+  filter(!is.na(MPO)) %>%
+  pivot_longer(
+    cols = starts_with("EMP_"), 
+    names_to = "sector", 
+    values_to = "employees"
+  )
+
+# Stacked bar plot for each sector with MPOs stacked
+stacked_sectors_plot <- ggplot(long_data, aes(x = sector, y = employees, fill = MPO)) +
+  geom_bar(stat = "identity", position = "stack") +  # Use position = "stack" for stacking
+  theme_minimal() +
+  labs(title = "Stacked Employment by Sector and MPO", x = "Employment Sector", y = "Number of Employees")
+ggplotly(stacked_sectors_plot)
+
+
+```
+
+## Row
+
+### Total Employment vs MPO
+
+```{r}
+
+
+# Total Employment by MPO
+t=ggplot(merged_data, aes(x = MPO, y = TOTEMP, fill = MPO)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Total Employment by MPO", x = "MPO", y = "Total Employment") +
+  coord_flip()
+
+ggplotly((t))
+
+
+```
+
+### Total Employment vs Region
+
+```{r}
+
+# Convert REGION to a factor
+merged_data$REGION <- as.factor(merged_data$REGION)
+
+# Plot Total Employment by REGION
+t <- ggplot(merged_data, aes(x = REGION, y = TOTEMP, fill = REGION)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Total Employment by REGION", x = "MPO", y = "Total Employment") +
+  coord_flip()
+
+# Convert ggplot object to an interactive plotly object
+
+ggplotly(t)
+
+```
+
+
+### Household Employment in Tennessee
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+# Assuming 'merged_data' is prepared and contains 'TOTEMP'
+
+# Create the ggplot object
+ggplot_map <- ggplot(data = merged_data) +
+  geom_sf(aes(color = TOTEMP), size = 2.5) +  # Use color to represent TOTEMP
+  scale_color_distiller(palette = "Spectral", direction = 1) +  # Adjust palette as needed
+  labs(title = "Total Employment",
+       subtitle = "By Traffic Analysis Zone or MPO",
+       color = "Total Employment") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Convert the ggplot object to plotly
+interactive_map <- ggplotly(ggplot_map)
+
+# Display the interactive map
+interactive_map
+
+
+
+```
+
+
+
+
+# Land Usage{.tabset}
+
+## charts{.tabset}
+
+### Graphs
+
+```{r}
+
+
+attribute_data <- st_drop_geometry(merged_data)
+land_use_data <- attribute_data %>%
+  summarise(
+    Residential = sum(Res, na.rm = TRUE),
+    Commercial = sum(Com, na.rm = TRUE),
+    Industrial = sum(Ind, na.rm = TRUE),
+    Agricultural = sum(Agr, na.rm = TRUE),
+    Vacant = sum(Vac, na.rm = TRUE)
+  )%>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "Category",
+    values_to = "Total_Land"
+  )
+
+
+# Now, create the bar plot
+a <- ggplot(land_use_data, aes(x = Category, y = Total_Land, fill = Category)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Tennessee State Total Land Use by Category", x = "Category", y = "Total Land (sq units)")
+
+ggplotly(a)
+
+
+
+
+```
+
+### land distribution by Region
+
+```{r}
+
+
+attribute_data <- st_drop_geometry(merged_data)
+aggregated_data <- attribute_data %>%
+  group_by(REGION) %>%
+  summarise(
+    Residential = sum(Res, na.rm = TRUE),
+    Commercial = sum(Com, na.rm = TRUE),
+    Industrial = sum(Ind, na.rm = TRUE),
+    Agricultural = sum(Agr, na.rm = TRUE),
+    Vacant = sum(Vac, na.rm = TRUE)
+  )
+
+# Reshape data for plotting with ggplot2
+long_data <- aggregated_data %>% 
+  pivot_longer(cols = c("Residential", "Commercial", "Industrial","Agricultural","Vacant"), names_to = "Land_Type", values_to = "Value")
+
+# Create the bar plot
+BAR<-ggplot(long_data, aes(x = REGION, y = Value, fill = Land_Type)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  theme_minimal() + 
+  labs(title = "Land Types by Region", x = "REGION", y = "Total Land (sq units)") + 
+  scale_fill_brewer(palette = "Set2") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggplotly(BAR)
+
+```
+
+### Landuse distribution vs MPO
+
+```{r}
+
+
+# Assuming 'merged_data' is your original dataframe
+
+# Drop geometry column
+attribute_data <- st_drop_geometry(merged_data)
+
+# Group by MPO and calculate sum of each land type
+aggregated_data <- attribute_data %>%
+  filter(!is.na(MPO)) %>%  # Remove rows with null MPO
+  group_by(MPO) %>%
+  summarise(
+    Residential = sum(Res, na.rm = TRUE),
+    Commercial = sum(Com, na.rm = TRUE),
+    Industrial = sum(Ind, na.rm = TRUE),
+    Agricultural = sum(Agr, na.rm = TRUE),
+    Vacant = sum(Vac, na.rm = TRUE)
+  )
+
+# Reshape data for plotting with ggplot2
+long_data <- aggregated_data %>% 
+  pivot_longer(cols = c("Residential", "Commercial", "Industrial","Agricultural","Vacant"), names_to = "Land_Type", values_to = "Value")
+
+# Plotting
+b <- ggplot(long_data, aes(x = MPO, y = Value, fill = Land_Type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  theme_minimal() +
+  labs(title = "Land Use Distribution by MPO", x = "MPO", y = "Area (sq units) ") +
+  coord_flip()
+
+# Convert ggplot to plotly object
+plotly_plot <- ggplotly(b)
+
+# Display the plotly plot
+plotly_plot
+
+
+```
+
+
+
+## Row
+
+
+### Residental land in Tennessee
+
+```{r}
+
+library(ggplot2)
+library(plotly)
+
+# Assuming 'merged_data' is prepared and contains 'TOTEMP'
+
+# Create the ggplot object
+ggplot_map <- ggplot(data = merged_data) +
+  geom_sf(aes(color = Res), size = 2.5) +  # Use color to represent TOTEMP
+  scale_color_distiller(palette = "Spectral", direction = 1) +  # Adjust palette as needed
+  labs(title = "Residential Area",
+       subtitle = "By Traffic Analysis Zone or MPO",
+       ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Convert the ggplot object to plotly
+interactive_map <- ggplotly(ggplot_map)
+
+# Display the interactive map
+interactive_map
+
+
+```
+
+### Commercial land in Tennessee
+
+```{r}
+
+library(ggplot2)
+library(plotly)
+
+# Assuming 'merged_data' is prepared and contains 'TOTEMP'
+
+# Create the ggplot object
+ggplot_map <- ggplot(data = merged_data) +
+  geom_sf(aes(color = Com), size = 2.5) +  # Use color to represent TOTEMP
+  scale_color_distiller(palette = "Spectral", direction = 1) +  # Adjust palette as needed
+  labs(title = "Commercial Land",
+       subtitle = "By Traffic Analysis Zone or MPO",
+       ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Convert the ggplot object to plotly
+interactive_map <- ggplotly(ggplot_map)
+
+# Display the interactive map
+interactive_map
+
+```
+
+### industrial land in Tennessee
+
+```{r}
+
+library(ggplot2)
+library(plotly)
+
+# Assuming 'merged_data' is prepared and contains 'TOTEMP'
+
+# Create the ggplot object
+ggplot_map <- ggplot(data = merged_data) +
+  geom_sf(aes(color = Ind), size = 2.5) +  # Use color to represent TOTEMP
+  scale_color_distiller(palette = "Spectral", direction = 1) +  # Adjust palette as needed
+  labs(title = "Industrial Land",
+       subtitle = "By Traffic Analysis Zone or MPO",
+       ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Convert the ggplot object to plotly
+interactive_map <- ggplotly(ggplot_map)
+
+# Display the interactive map
+interactive_map
+
+```
+
+### Agricultural land in Tennessee
+
+```{r}
+
+library(ggplot2)
+library(plotly)
+
+# Assuming 'merged_data' is prepared and contains 'TOTEMP'
+
+# Create the ggplot object
+ggplot_map <- ggplot(data = merged_data) +
+  geom_sf(aes(color = Agr), size = 2.5) +  # Use color to represent TOTEMP
+  scale_color_distiller(palette = "Spectral", direction = 1) +  # Adjust palette as needed
+  labs(title = "Agricultural Land",
+       subtitle = "By Traffic Analysis Zone or MPO",
+       ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Convert the ggplot object to plotly
+interactive_map <- ggplotly(ggplot_map)
+
+# Display the interactive map
+interactive_map
+
+```
+
+
+
